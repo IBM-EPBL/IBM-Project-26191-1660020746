@@ -1,5 +1,5 @@
 # IBM-Project-26191-1660020746
-A Novel Method for Handwritten Digit Recognition System
+# A Novel Method for Handwritten Digit Recognition System
 
 Team Leader - Harshita B (212219060107)
 
