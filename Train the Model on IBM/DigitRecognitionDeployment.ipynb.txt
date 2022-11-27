@@ -1,0 +1,1010 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "12c583bd",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2022-11-19 23:01:06.210802: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 FMA\n",
+      "To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.\n"
+     ]
+    }
+   ],
+   "source": [
+    "from keras.datasets import mnist\n",
+    "import matplotlib.pyplot as plt  \n",
+    "from keras.utils import np_utils\n",
+    "from tensorflow.keras.models import Sequential\n",
+    "from tensorflow.keras.layers import Conv2D,Dense,Flatten\n",
+    "from tensorflow.keras.optimizers import Adam"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "12d69e18",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(60000, 28, 28)\n",
+      "(10000, 28, 28)\n",
+      "(10000,)\n",
+      "(60000,)\n"
+     ]
+    }
+   ],
+   "source": [
+    "(X_train,y_train),(X_test,y_test) =mnist.load_data()\n",
+    "print(X_train.shape)\n",
+    "print(X_test.shape)\n",
+    "print(y_test.shape)\n",
+    "print(y_train.shape)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "c72bfeaa",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "The label value is  0\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7f8f33c95520>"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 640x480 with 1 Axes>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "print(\"The label value is \",y_test[10]) #Value in y_test \n",
+    "plt.imshow(X_test[10])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "cb8923df",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "The label value is  6\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7f8f34ab2130>"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 640x480 with 1 Axes>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "print(\"The label value is \",y_test[100]) #Value in y_test \n",
+    "plt.imshow(X_test[100])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "52f999df",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "The label value is  4\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7f8f34af4580>"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 640x480 with 1 Axes>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "print(\"The label value is \",y_test[65]) #Value in y_test \n",
+    "plt.imshow(X_test[65])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "2f95b4ac",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(60000, 28, 28)"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "X_train.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "54b496aa",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(10000, 28, 28)"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "X_test.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "689ef375",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "X_train1 = X_train.reshape(60000, 28, 28, 1).astype('float32')\n",
+    "\n",
+    "X_test1 = X_test.reshape(10000, 28, 28, 1).astype('float32')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "d5bdcf8b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "number_of_classes= 10\n",
+    "y_train1 = np_utils.to_categorical(y_train,number_of_classes)\n",
+    "y_test1 = np_utils.to_categorical(y_test,number_of_classes)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "33974543",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "After encoding the value 0 become [1. 0. 0. 0. 0. 0. 0. 0. 0. 0.]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"After encoding the value\",y_test[10] ,\"become\", y_test1[10])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "eeb3a846",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "After encoding the value 6 become [0. 0. 0. 0. 0. 0. 1. 0. 0. 0.]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"After encoding the value\",y_test[100] ,\"become\", y_test1[100])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "5aa4887b",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "After encoding the value 4 become [0. 0. 0. 0. 1. 0. 0. 0. 0. 0.]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"After encoding the value\",y_test[65] ,\"become\", y_test1[65])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "a8f40eeb",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2022-11-19 23:01:34.545228: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 FMA\n",
+      "To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.\n"
+     ]
+    }
+   ],
+   "source": [
+    "model = Sequential()\n",
+    "model.add(Conv2D(64, (3, 3), input_shape=(28, 28, 1), activation=\"relu\"))\n",
+    "model.add(Conv2D(32, (3, 3), activation=\"relu\"))\n",
+    "model.add(Flatten())\n",
+    "model.add(Dense(number_of_classes, activation=\"softmax\"))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "87be77f8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model.compile(loss='categorical_crossentropy', optimizer=\"Adam\", metrics=[\"accuracy\"])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "id": "87e003b7",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Epoch 1/10\n",
+      "1875/1875 [==============================] - 128s 68ms/step - loss: 0.2199 - accuracy: 0.9519 - val_loss: 0.0941 - val_accuracy: 0.9692\n",
+      "Epoch 2/10\n",
+      "1875/1875 [==============================] - 165s 88ms/step - loss: 0.0675 - accuracy: 0.9800 - val_loss: 0.0729 - val_accuracy: 0.9789\n",
+      "Epoch 3/10\n",
+      "1875/1875 [==============================] - 138s 74ms/step - loss: 0.0462 - accuracy: 0.9857 - val_loss: 0.0897 - val_accuracy: 0.9752\n",
+      "Epoch 4/10\n",
+      "1875/1875 [==============================] - 116s 62ms/step - loss: 0.0351 - accuracy: 0.9895 - val_loss: 0.0906 - val_accuracy: 0.9778\n",
+      "Epoch 5/10\n",
+      "1875/1875 [==============================] - 123s 66ms/step - loss: 0.0287 - accuracy: 0.9912 - val_loss: 0.1013 - val_accuracy: 0.9775\n",
+      "Epoch 6/10\n",
+      "1875/1875 [==============================] - 120s 64ms/step - loss: 0.0218 - accuracy: 0.9933 - val_loss: 0.1290 - val_accuracy: 0.9796\n",
+      "Epoch 7/10\n",
+      "1875/1875 [==============================] - 144s 77ms/step - loss: 0.0218 - accuracy: 0.9938 - val_loss: 0.1592 - val_accuracy: 0.9763\n",
+      "Epoch 8/10\n",
+      "1875/1875 [==============================] - 154s 82ms/step - loss: 0.0196 - accuracy: 0.9953 - val_loss: 0.1425 - val_accuracy: 0.9789\n",
+      "Epoch 9/10\n",
+      "1875/1875 [==============================] - 154s 82ms/step - loss: 0.0182 - accuracy: 0.9951 - val_loss: 0.1608 - val_accuracy: 0.9777\n",
+      "Epoch 10/10\n",
+      "1875/1875 [==============================] - 158s 84ms/step - loss: 0.0179 - accuracy: 0.9955 - val_loss: 0.1853 - val_accuracy: 0.9786\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<keras.callbacks.History at 0x7f8f23198ac0>"
+      ]
+     },
+     "execution_count": 17,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "model.fit(X_train1, y_train1, batch_size=32, epochs=10, validation_data=(X_test1,y_test1))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "ab3789c0",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Metrics (Test Loss & Test Accuracy): \n",
+      "[0.18527460098266602, 0.978600025177002]\n"
+     ]
+    }
+   ],
+   "source": [
+    "metrics = model.evaluate(X_test1, y_test1, verbose=0)\n",
+    "print(\"Metrics (Test Loss & Test Accuracy): \")\n",
+    "print(metrics)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "aa6e7aea",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "1/1 [==============================] - 0s 214ms/step\n",
+      "[[5.6537705e-30 1.7078787e-29 3.7912413e-18 1.5945367e-15 3.0458845e-32\n",
+      "  1.4533778e-29 1.0550475e-36 1.0000000e+00 6.1975852e-26 1.0890616e-21]\n",
+      " [9.9327593e-28 1.8374400e-27 1.0000000e+00 1.8238443e-26 2.6871108e-33\n",
+      "  0.0000000e+00 3.5422185e-19 0.0000000e+00 6.6041357e-21 4.2143822e-38]\n",
+      " [1.8802779e-16 1.0000000e+00 9.5115662e-18 4.6679399e-23 1.1235284e-15\n",
+      "  1.1163128e-15 5.2002084e-19 5.7109758e-22 9.0139680e-13 4.1221714e-26]\n",
+      " [1.0000000e+00 2.3704429e-27 2.8971922e-18 1.5362263e-30 4.4204947e-23\n",
+      "  1.3150449e-18 5.5748338e-21 1.2710246e-28 1.1449631e-22 1.4779471e-18]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "prediction = model.predict(X_test1[:4])\n",
+    "print(prediction)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "1c4a8308",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[7 2 1 0]\n",
+      "[[0. 0. 0. 0. 0. 0. 0. 1. 0. 0.]\n",
+      " [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]\n",
+      " [0. 1. 0. 0. 0. 0. 0. 0. 0. 0.]\n",
+      " [1. 0. 0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "print(np.argmax(prediction, axis=1))\n",
+    "print(y_test1[:4])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "98cac257",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model.save(\"digit.h5\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "id": "e6d96d2c",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from tensorflow.keras.models import load_model\n",
+    "model=load_model(\"digit.h5\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "id": "0509e097",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Model: \"sequential\"\n",
+      "_________________________________________________________________\n",
+      " Layer (type)                Output Shape              Param #   \n",
+      "=================================================================\n",
+      " conv2d (Conv2D)             (None, 26, 26, 64)        640       \n",
+      "                                                                 \n",
+      " conv2d_1 (Conv2D)           (None, 24, 24, 32)        18464     \n",
+      "                                                                 \n",
+      " flatten (Flatten)           (None, 18432)             0         \n",
+      "                                                                 \n",
+      " dense (Dense)               (None, 10)                184330    \n",
+      "                                                                 \n",
+      "=================================================================\n",
+      "Total params: 203,434\n",
+      "Trainable params: 203,434\n",
+      "Non-trainable params: 0\n",
+      "_________________________________________________________________\n"
+     ]
+    }
+   ],
+   "source": [
+    "model.summary()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "id": "2207f100",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a digit.h5\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Saving in tar\n",
+    "\n",
+    "!tar -zcvf digit_recognition.tgz digit.h5"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "id": "a2073ebc",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Collecting watson-machine-learning-client\n",
+      "  Downloading watson_machine_learning_client-1.0.391-py3-none-any.whl (538 kB)\n",
+      "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m538.9/538.9 kB\u001b[0m \u001b[31m1.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m00:01\u001b[0m00:01\u001b[0m\n",
+      "\u001b[?25hRequirement already satisfied: urllib3 in /Applications/anaconda3/lib/python3.9/site-packages (from watson-machine-learning-client) (1.26.11)\n",
+      "Requirement already satisfied: tabulate in /Applications/anaconda3/lib/python3.9/site-packages (from watson-machine-learning-client) (0.8.10)\n",
+      "Requirement already satisfied: boto3 in /Applications/anaconda3/lib/python3.9/site-packages (from watson-machine-learning-client) (1.24.28)\n",
+      "Requirement already satisfied: tqdm in /Applications/anaconda3/lib/python3.9/site-packages (from watson-machine-learning-client) (4.64.1)\n",
+      "Collecting lomond\n",
+      "  Downloading lomond-0.3.3-py2.py3-none-any.whl (35 kB)\n",
+      "Requirement already satisfied: certifi in /Applications/anaconda3/lib/python3.9/site-packages (from watson-machine-learning-client) (2022.9.24)\n",
+      "Collecting ibm-cos-sdk\n",
+      "  Downloading ibm-cos-sdk-2.12.0.tar.gz (55 kB)\n",
+      "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m55.6/55.6 kB\u001b[0m \u001b[31m638.8 kB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m \u001b[36m0:00:01\u001b[0m\n",
+      "\u001b[?25h  Preparing metadata (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25hRequirement already satisfied: requests in /Applications/anaconda3/lib/python3.9/site-packages (from watson-machine-learning-client) (2.28.1)\n",
+      "Requirement already satisfied: pandas in /Applications/anaconda3/lib/python3.9/site-packages (from watson-machine-learning-client) (1.4.4)\n",
+      "Requirement already satisfied: jmespath<2.0.0,>=0.7.1 in /Applications/anaconda3/lib/python3.9/site-packages (from boto3->watson-machine-learning-client) (0.10.0)\n",
+      "Requirement already satisfied: botocore<1.28.0,>=1.27.28 in /Applications/anaconda3/lib/python3.9/site-packages (from boto3->watson-machine-learning-client) (1.27.28)\n",
+      "Requirement already satisfied: s3transfer<0.7.0,>=0.6.0 in /Applications/anaconda3/lib/python3.9/site-packages (from boto3->watson-machine-learning-client) (0.6.0)\n",
+      "Collecting ibm-cos-sdk-core==2.12.0\n",
+      "  Downloading ibm-cos-sdk-core-2.12.0.tar.gz (956 kB)\n",
+      "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m956.8/956.8 kB\u001b[0m \u001b[31m1.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m00:01\u001b[0m00:01\u001b[0m\n",
+      "\u001b[?25h  Preparing metadata (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25hCollecting ibm-cos-sdk-s3transfer==2.12.0\n",
+      "  Downloading ibm-cos-sdk-s3transfer-2.12.0.tar.gz (135 kB)\n",
+      "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m135.7/135.7 kB\u001b[0m \u001b[31m1.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m00:01\u001b[0m00:01\u001b[0m\n",
+      "\u001b[?25h  Preparing metadata (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25hRequirement already satisfied: python-dateutil<3.0.0,>=2.8.2 in /Applications/anaconda3/lib/python3.9/site-packages (from ibm-cos-sdk-core==2.12.0->ibm-cos-sdk->watson-machine-learning-client) (2.8.2)\n",
+      "Requirement already satisfied: idna<4,>=2.5 in /Applications/anaconda3/lib/python3.9/site-packages (from requests->watson-machine-learning-client) (3.3)\n",
+      "Requirement already satisfied: charset-normalizer<3,>=2 in /Applications/anaconda3/lib/python3.9/site-packages (from requests->watson-machine-learning-client) (2.0.4)\n",
+      "Requirement already satisfied: six>=1.10.0 in /Applications/anaconda3/lib/python3.9/site-packages (from lomond->watson-machine-learning-client) (1.16.0)\n",
+      "Requirement already satisfied: pytz>=2020.1 in /Applications/anaconda3/lib/python3.9/site-packages (from pandas->watson-machine-learning-client) (2022.1)\n",
+      "Requirement already satisfied: numpy>=1.18.5 in /Applications/anaconda3/lib/python3.9/site-packages (from pandas->watson-machine-learning-client) (1.21.5)\n",
+      "Building wheels for collected packages: ibm-cos-sdk, ibm-cos-sdk-core, ibm-cos-sdk-s3transfer\n",
+      "  Building wheel for ibm-cos-sdk (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25h  Created wheel for ibm-cos-sdk: filename=ibm_cos_sdk-2.12.0-py3-none-any.whl size=73910 sha256=d703601f523a165a7a6ba465178c19839d31e95f9fe4cf8ef05cdd7a745cb791\n",
+      "  Stored in directory: /Users/jeyasri/Library/Caches/pip/wheels/31/8c/e6/9bd830e254449a64d3e3c8a79da6fb6bc940a19b165d76c3c2\n",
+      "  Building wheel for ibm-cos-sdk-core (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25h  Created wheel for ibm-cos-sdk-core: filename=ibm_cos_sdk_core-2.12.0-py3-none-any.whl size=562947 sha256=67c27ec3b31890f9579a1bd3a5e5b3e8fe24a5b951438b77142cd39c3a4c4db7\n",
+      "  Stored in directory: /Users/jeyasri/Library/Caches/pip/wheels/e4/4c/9e/97ee8774f14cbfb9aa69201a58056b1e1379123dfbdbedc24e\n",
+      "  Building wheel for ibm-cos-sdk-s3transfer (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25h  Created wheel for ibm-cos-sdk-s3transfer: filename=ibm_cos_sdk_s3transfer-2.12.0-py3-none-any.whl size=89765 sha256=5d9ae16eb53398f51a04032a84769d330ded26c43b58bdffaa7a79c2993f226f\n",
+      "  Stored in directory: /Users/jeyasri/Library/Caches/pip/wheels/4f/8b/ce/0d93b358521705de3f110de4356db2b820551ea009c865e4bd\n",
+      "Successfully built ibm-cos-sdk ibm-cos-sdk-core ibm-cos-sdk-s3transfer\n",
+      "Installing collected packages: lomond, ibm-cos-sdk-core, ibm-cos-sdk-s3transfer, ibm-cos-sdk, watson-machine-learning-client\n",
+      "Successfully installed ibm-cos-sdk-2.12.0 ibm-cos-sdk-core-2.12.0 ibm-cos-sdk-s3transfer-2.12.0 lomond-0.3.3 watson-machine-learning-client-1.0.391\n"
+     ]
+    }
+   ],
+   "source": [
+    "!pip install watson-machine-learning-client"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "id": "77255538",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Collecting ibm_watson_machine_learning\n",
+      "  Downloading ibm_watson_machine_learning-1.0.257-py3-none-any.whl (1.8 MB)\n",
+      "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m1.8/1.8 MB\u001b[0m \u001b[31m1.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m00:01\u001b[0m00:01\u001b[0m0m\n",
+      "\u001b[?25hRequirement already satisfied: urllib3 in /Applications/anaconda3/lib/python3.9/site-packages (from ibm_watson_machine_learning) (1.26.11)\n",
+      "Requirement already satisfied: requests in /Applications/anaconda3/lib/python3.9/site-packages (from ibm_watson_machine_learning) (2.28.1)\n",
+      "Requirement already satisfied: pandas<1.5.0,>=0.24.2 in /Applications/anaconda3/lib/python3.9/site-packages (from ibm_watson_machine_learning) (1.4.4)\n",
+      "Collecting ibm-cos-sdk==2.11.*\n",
+      "  Downloading ibm-cos-sdk-2.11.0.tar.gz (53 kB)\n",
+      "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m53.3/53.3 kB\u001b[0m \u001b[31m840.7 kB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m \u001b[36m0:00:01\u001b[0m\n",
+      "\u001b[?25h  Preparing metadata (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25hRequirement already satisfied: packaging in /Applications/anaconda3/lib/python3.9/site-packages (from ibm_watson_machine_learning) (21.3)\n",
+      "Requirement already satisfied: certifi in /Applications/anaconda3/lib/python3.9/site-packages (from ibm_watson_machine_learning) (2022.9.24)\n",
+      "Requirement already satisfied: lomond in /Applications/anaconda3/lib/python3.9/site-packages (from ibm_watson_machine_learning) (0.3.3)\n",
+      "Requirement already satisfied: importlib-metadata in /Applications/anaconda3/lib/python3.9/site-packages (from ibm_watson_machine_learning) (4.11.3)\n",
+      "Requirement already satisfied: tabulate in /Applications/anaconda3/lib/python3.9/site-packages (from ibm_watson_machine_learning) (0.8.10)\n",
+      "Collecting ibm-cos-sdk-core==2.11.0\n",
+      "  Downloading ibm-cos-sdk-core-2.11.0.tar.gz (913 kB)\n",
+      "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m913.9/913.9 kB\u001b[0m \u001b[31m1.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m00:01\u001b[0m00:01\u001b[0m\n",
+      "\u001b[?25h  Preparing metadata (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25hCollecting ibm-cos-sdk-s3transfer==2.11.0\n",
+      "  Downloading ibm-cos-sdk-s3transfer-2.11.0.tar.gz (135 kB)\n",
+      "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m135.6/135.6 kB\u001b[0m \u001b[31m1.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m00:01\u001b[0m00:01\u001b[0m\n",
+      "\u001b[?25h  Preparing metadata (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25hRequirement already satisfied: jmespath<1.0.0,>=0.7.1 in /Applications/anaconda3/lib/python3.9/site-packages (from ibm-cos-sdk==2.11.*->ibm_watson_machine_learning) (0.10.0)\n",
+      "Requirement already satisfied: python-dateutil<3.0.0,>=2.1 in /Applications/anaconda3/lib/python3.9/site-packages (from ibm-cos-sdk-core==2.11.0->ibm-cos-sdk==2.11.*->ibm_watson_machine_learning) (2.8.2)\n",
+      "Requirement already satisfied: pytz>=2020.1 in /Applications/anaconda3/lib/python3.9/site-packages (from pandas<1.5.0,>=0.24.2->ibm_watson_machine_learning) (2022.1)\n",
+      "Requirement already satisfied: numpy>=1.18.5 in /Applications/anaconda3/lib/python3.9/site-packages (from pandas<1.5.0,>=0.24.2->ibm_watson_machine_learning) (1.21.5)\n",
+      "Requirement already satisfied: idna<4,>=2.5 in /Applications/anaconda3/lib/python3.9/site-packages (from requests->ibm_watson_machine_learning) (3.3)\n",
+      "Requirement already satisfied: charset-normalizer<3,>=2 in /Applications/anaconda3/lib/python3.9/site-packages (from requests->ibm_watson_machine_learning) (2.0.4)\n",
+      "Requirement already satisfied: zipp>=0.5 in /Applications/anaconda3/lib/python3.9/site-packages (from importlib-metadata->ibm_watson_machine_learning) (3.8.0)\n",
+      "Requirement already satisfied: six>=1.10.0 in /Applications/anaconda3/lib/python3.9/site-packages (from lomond->ibm_watson_machine_learning) (1.16.0)\n",
+      "Requirement already satisfied: pyparsing!=3.0.5,>=2.0.2 in /Applications/anaconda3/lib/python3.9/site-packages (from packaging->ibm_watson_machine_learning) (3.0.9)\n",
+      "Building wheels for collected packages: ibm-cos-sdk, ibm-cos-sdk-core, ibm-cos-sdk-s3transfer\n",
+      "  Building wheel for ibm-cos-sdk (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25h  Created wheel for ibm-cos-sdk: filename=ibm_cos_sdk-2.11.0-py3-none-any.whl size=73641 sha256=34bf35b6ff7783bf3e2b86a58c9fc5c95d31a6e41b1c8aae31fccb55440a0b04\n",
+      "  Stored in directory: /Users/jeyasri/Library/Caches/pip/wheels/d3/a5/34/52d2e378d3d0446989ebcd214af8bad55beecf905258852b9f\n",
+      "  Building wheel for ibm-cos-sdk-core (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25h  Created wheel for ibm-cos-sdk-core: filename=ibm_cos_sdk_core-2.11.0-py3-none-any.whl size=536333 sha256=4fc5fc97ca512fec71b59e807965c6c52536e275c059e875fc0eb62a1c22b7c3\n",
+      "  Stored in directory: /Users/jeyasri/Library/Caches/pip/wheels/ed/a7/cd/32a2cf8bae11ba6fc56451b7c46608cfd9176d1da8c6f73fa1\n",
+      "  Building wheel for ibm-cos-sdk-s3transfer (setup.py) ... \u001b[?25ldone\n",
+      "\u001b[?25h  Created wheel for ibm-cos-sdk-s3transfer: filename=ibm_cos_sdk_s3transfer-2.11.0-py3-none-any.whl size=89471 sha256=39f64f05f2b083a64228d43d197cfe003cec8dab3c122a091aa836bdf1cc6dee\n",
+      "  Stored in directory: /Users/jeyasri/Library/Caches/pip/wheels/4a/3f/7c/551692188f14bdb095e715dd7f1061fec13b3766d45f3c3296\n",
+      "Successfully built ibm-cos-sdk ibm-cos-sdk-core ibm-cos-sdk-s3transfer\n",
+      "Installing collected packages: ibm-cos-sdk-core, ibm-cos-sdk-s3transfer, ibm-cos-sdk, ibm_watson_machine_learning\n",
+      "  Attempting uninstall: ibm-cos-sdk-core\n",
+      "    Found existing installation: ibm-cos-sdk-core 2.12.0\n",
+      "    Uninstalling ibm-cos-sdk-core-2.12.0:\n",
+      "      Successfully uninstalled ibm-cos-sdk-core-2.12.0\n",
+      "  Attempting uninstall: ibm-cos-sdk-s3transfer\n",
+      "    Found existing installation: ibm-cos-sdk-s3transfer 2.12.0\n",
+      "    Uninstalling ibm-cos-sdk-s3transfer-2.12.0:\n",
+      "      Successfully uninstalled ibm-cos-sdk-s3transfer-2.12.0\n",
+      "  Attempting uninstall: ibm-cos-sdk\n",
+      "    Found existing installation: ibm-cos-sdk 2.12.0\n",
+      "    Uninstalling ibm-cos-sdk-2.12.0:\n",
+      "      Successfully uninstalled ibm-cos-sdk-2.12.0\n",
+      "Successfully installed ibm-cos-sdk-2.11.0 ibm-cos-sdk-core-2.11.0 ibm-cos-sdk-s3transfer-2.11.0 ibm_watson_machine_learning-1.0.257\n"
+     ]
+    }
+   ],
+   "source": [
+    "!pip install ibm_watson_machine_learning"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "id": "78314fe0",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<ibm_watson_machine_learning.client.APIClient at 0x7f8f23f7c790>"
+      ]
+     },
+     "execution_count": 29,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from ibm_watson_machine_learning import APIClient\n",
+    "\n",
+    "wml_credentials = {\n",
+    "                   \"url\": \"https://us-south.ml.cloud.ibm.com\",  # example: \"https://eu-gb.ml.cloud.ibm.com\"\n",
+    "                   \"apikey\":\"Dt-EkyRgxXR--1mhO8JnCjRGR_AvzoUpJQqbzFnWklU1\"\n",
+    "                  }\n",
+    "\n",
+    "client = APIClient(wml_credentials)\n",
+    "client"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "id": "75a0da0f",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{'resources': [{'entity': {'compute': [{'crn': 'crn:v1:bluemix:public:pm-20:us-south:a/d74a81b5072a47ea932088f3c95b3d8d:ab0faf12-e097-475c-b555-79f9a13b440d::',\n",
+       "      'guid': 'ab0faf12-e097-475c-b555-79f9a13b440d',\n",
+       "      'name': 'Watson Machine Learning-lz',\n",
+       "      'type': 'machine_learning'}],\n",
+       "    'description': '',\n",
+       "    'name': 'digit_deploy',\n",
+       "    'scope': {'bss_account_id': 'd74a81b5072a47ea932088f3c95b3d8d'},\n",
+       "    'stage': {'production': False},\n",
+       "    'status': {'state': 'active'},\n",
+       "    'storage': {'properties': {'bucket_name': 'dede02b9-9740-4319-881c-f10ec6202dce',\n",
+       "      'bucket_region': 'us-south',\n",
+       "      'credentials': {'admin': {'access_key_id': '9bfe67bd39f14cf5a8666e6188b02143',\n",
+       "        'api_key': '50PMGAm3eSnX_G1VpNG6_XJkwa-veWNCSyyru5ksZsWB',\n",
+       "        'secret_access_key': 'b63dd4e1b1ecefdbdb32478174a66d411cd7a98519c8565b',\n",
+       "        'service_id': 'ServiceId-cf7956f9-5d6e-4fde-9bf9-c2d7d324d3d3'},\n",
+       "       'editor': {'access_key_id': '9e76c7cc5b2c438396b834aaeda87df4',\n",
+       "        'api_key': 'EzZkGCey-46EuCVz3IztC8mnBFtuaD40Srufvm_hFBUz',\n",
+       "        'resource_key_crn': 'crn:v1:bluemix:public:cloud-object-storage:global:a/d74a81b5072a47ea932088f3c95b3d8d:b81cecb9-1689-4f8e-87d7-c70c72300b4e::',\n",
+       "        'secret_access_key': '00cbee74cb48d75ca43d688108297703eea7ec26903a04cd',\n",
+       "        'service_id': 'ServiceId-725da56e-c4c0-4ecb-9d36-ea58872bbcf3'},\n",
+       "       'viewer': {'access_key_id': '238ea99d20354b55b78c557fdb973972',\n",
+       "        'api_key': 'im-71co9LWBLEb295LCJlWx4AOejZgzJAxpq1SB9P5N9',\n",
+       "        'resource_key_crn': 'crn:v1:bluemix:public:cloud-object-storage:global:a/d74a81b5072a47ea932088f3c95b3d8d:b81cecb9-1689-4f8e-87d7-c70c72300b4e::',\n",
+       "        'secret_access_key': 'e3ca34240ce3757c166469ac364c6df4e20f464cbbad5d7a',\n",
+       "        'service_id': 'ServiceId-ca7069ff-0f0b-479e-af7f-4127e8cd1703'}},\n",
+       "      'endpoint_url': 'https://s3.us-south.cloud-object-storage.appdomain.cloud',\n",
+       "      'guid': 'b81cecb9-1689-4f8e-87d7-c70c72300b4e',\n",
+       "      'resource_crn': 'crn:v1:bluemix:public:cloud-object-storage:global:a/d74a81b5072a47ea932088f3c95b3d8d:b81cecb9-1689-4f8e-87d7-c70c72300b4e::'},\n",
+       "     'type': 'bmcos_object_storage'}},\n",
+       "   'metadata': {'created_at': '2022-11-13T07:31:19.376Z',\n",
+       "    'creator_id': 'IBMid-666002J5U4',\n",
+       "    'id': '0d542d58-0e93-4b26-a2c6-156ce46c2f36',\n",
+       "    'updated_at': '2022-11-13T07:31:32.819Z',\n",
+       "    'url': '/v2/spaces/0d542d58-0e93-4b26-a2c6-156ce46c2f36'}}]}"
+      ]
+     },
+     "execution_count": 30,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "client.spaces.get_details()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "id": "1e5b94af",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def guid_space_name(client,digit_deploy):\n",
+    "    space = client.spaces.get_details()\n",
+    "    return(next(item for item in space['resources'] if item['entity']['name']==digit_deploy)['metadata']['id'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "id": "b8554df2",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'0d542d58-0e93-4b26-a2c6-156ce46c2f36'"
+      ]
+     },
+     "execution_count": 32,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "space_uid = guid_space_name(client,'digit_deploy')\n",
+    "space_uid"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "id": "79f176f7",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'SUCCESS'"
+      ]
+     },
+     "execution_count": 33,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "client.set.default_space(space_uid)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "id": "bdd20ec0",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "-----------------------------  ------------------------------------  ----\n",
+      "NAME                           ASSET_ID                              TYPE\n",
+      "default_py3.6                  0062b8c9-8b7d-44a0-a9b9-46c416adcbd9  base\n",
+      "kernel-spark3.2-scala2.12      020d69ce-7ac1-5e68-ac1a-31189867356a  base\n",
+      "pytorch-onnx_1.3-py3.7-edt     069ea134-3346-5748-b513-49120e15d288  base\n",
+      "scikit-learn_0.20-py3.6        09c5a1d0-9c1e-4473-a344-eb7b665ff687  base\n",
+      "spark-mllib_3.0-scala_2.12     09f4cff0-90a7-5899-b9ed-1ef348aebdee  base\n",
+      "pytorch-onnx_rt22.1-py3.9      0b848dd4-e681-5599-be41-b5f6fccc6471  base\n",
+      "ai-function_0.1-py3.6          0cdb0f1e-5376-4f4d-92dd-da3b69aa9bda  base\n",
+      "shiny-r3.6                     0e6e79df-875e-4f24-8ae9-62dcc2148306  base\n",
+      "tensorflow_2.4-py3.7-horovod   1092590a-307d-563d-9b62-4eb7d64b3f22  base\n",
+      "pytorch_1.1-py3.6              10ac12d6-6b30-4ccd-8392-3e922c096a92  base\n",
+      "tensorflow_1.15-py3.6-ddl      111e41b3-de2d-5422-a4d6-bf776828c4b7  base\n",
+      "autoai-kb_rt22.2-py3.10        125b6d9a-5b1f-5e8d-972a-b251688ccf40  base\n",
+      "runtime-22.1-py3.9             12b83a17-24d8-5082-900f-0ab31fbfd3cb  base\n",
+      "scikit-learn_0.22-py3.6        154010fa-5b3b-4ac1-82af-4d5ee5abbc85  base\n",
+      "default_r3.6                   1b70aec3-ab34-4b87-8aa0-a4a3c8296a36  base\n",
+      "pytorch-onnx_1.3-py3.6         1bc6029a-cc97-56da-b8e0-39c3880dbbe7  base\n",
+      "kernel-spark3.3-r3.6           1c9e5454-f216-59dd-a20e-474a5cdf5988  base\n",
+      "pytorch-onnx_rt22.1-py3.9-edt  1d362186-7ad5-5b59-8b6c-9d0880bde37f  base\n",
+      "tensorflow_2.1-py3.6           1eb25b84-d6ed-5dde-b6a5-3fbdf1665666  base\n",
+      "spark-mllib_3.2                20047f72-0a98-58c7-9ff5-a77b012eb8f5  base\n",
+      "tensorflow_2.4-py3.8-horovod   217c16f6-178f-56bf-824a-b19f20564c49  base\n",
+      "runtime-22.1-py3.9-cuda        26215f05-08c3-5a41-a1b0-da66306ce658  base\n",
+      "do_py3.8                       295addb5-9ef9-547e-9bf4-92ae3563e720  base\n",
+      "autoai-ts_3.8-py3.8            2aa0c932-798f-5ae9-abd6-15e0c2402fb5  base\n",
+      "tensorflow_1.15-py3.6          2b73a275-7cbf-420b-a912-eae7f436e0bc  base\n",
+      "kernel-spark3.3-py3.9          2b7961e2-e3b1-5a8c-a491-482c8368839a  base\n",
+      "pytorch_1.2-py3.6              2c8ef57d-2687-4b7d-acce-01f94976dac1  base\n",
+      "spark-mllib_2.3                2e51f700-bca0-4b0d-88dc-5c6791338875  base\n",
+      "pytorch-onnx_1.1-py3.6-edt     32983cea-3f32-4400-8965-dde874a8d67e  base\n",
+      "spark-mllib_3.0-py37           36507ebe-8770-55ba-ab2a-eafe787600e9  base\n",
+      "spark-mllib_2.4                390d21f8-e58b-4fac-9c55-d7ceda621326  base\n",
+      "autoai-ts_rt22.2-py3.10        396b2e83-0953-5b86-9a55-7ce1628a406f  base\n",
+      "xgboost_0.82-py3.6             39e31acd-5f30-41dc-ae44-60233c80306e  base\n",
+      "pytorch-onnx_1.2-py3.6-edt     40589d0e-7019-4e28-8daa-fb03b6f4fe12  base\n",
+      "pytorch-onnx_rt22.2-py3.10     40e73f55-783a-5535-b3fa-0c8b94291431  base\n",
+      "default_r36py38                41c247d3-45f8-5a71-b065-8580229facf0  base\n",
+      "autoai-ts_rt22.1-py3.9         4269d26e-07ba-5d40-8f66-2d495b0c71f7  base\n",
+      "autoai-obm_3.0                 42b92e18-d9ab-567f-988a-4240ba1ed5f7  base\n",
+      "pmml-3.0_4.3                   493bcb95-16f1-5bc5-bee8-81b8af80e9c7  base\n",
+      "spark-mllib_2.4-r_3.6          49403dff-92e9-4c87-a3d7-a42d0021c095  base\n",
+      "xgboost_0.90-py3.6             4ff8d6c2-1343-4c18-85e1-689c965304d3  base\n",
+      "pytorch-onnx_1.1-py3.6         50f95b2a-bc16-43bb-bc94-b0bed208c60b  base\n",
+      "autoai-ts_3.9-py3.8            52c57136-80fa-572e-8728-a5e7cbb42cde  base\n",
+      "spark-mllib_2.4-scala_2.11     55a70f99-7320-4be5-9fb9-9edb5a443af5  base\n",
+      "spark-mllib_3.0                5c1b0ca2-4977-5c2e-9439-ffd44ea8ffe9  base\n",
+      "autoai-obm_2.0                 5c2e37fa-80b8-5e77-840f-d912469614ee  base\n",
+      "spss-modeler_18.1              5c3cad7e-507f-4b2a-a9a3-ab53a21dee8b  base\n",
+      "cuda-py3.8                     5d3232bf-c86b-5df4-a2cd-7bb870a1cd4e  base\n",
+      "runtime-22.2-py3.10-xc         5e8cddff-db4a-5a6a-b8aa-2d4af9864dab  base\n",
+      "autoai-kb_3.1-py3.7            632d4b22-10aa-5180-88f0-f52dfb6444d7  base\n",
+      "-----------------------------  ------------------------------------  ----\n",
+      "Note: Only first 50 records were displayed. To display more use 'limit' parameter.\n"
+     ]
+    }
+   ],
+   "source": [
+    "client.software_specifications.list()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "id": "a4c5cce3",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'acd9c798-6974-5d2f-a657-ce06e986df4d'"
+      ]
+     },
+     "execution_count": 35,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "software_space_uid = client.software_specifications.get_uid_by_name('tensorflow_rt22.1-py3.9')\n",
+    "software_space_uid"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 36,
+   "id": "09851cf1",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model_details = client.repository.store_model(model='digit_recognition.tgz',meta_props={\n",
+    "    client.repository.ModelMetaNames.NAME:\"DigitRecognition Model\",\n",
+    "    client.repository.ModelMetaNames.TYPE:\"tensorflow_2.7\",\n",
+    "    client.repository.ModelMetaNames.SOFTWARE_SPEC_UID:software_space_uid\n",
+    "})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 37,
+   "id": "87568312",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{'entity': {'hybrid_pipeline_software_specs': [],\n",
+       "  'software_spec': {'id': 'acd9c798-6974-5d2f-a657-ce06e986df4d',\n",
+       "   'name': 'tensorflow_rt22.1-py3.9'},\n",
+       "  'type': 'tensorflow_2.7'},\n",
+       " 'metadata': {'created_at': '2022-11-19T17:58:10.329Z',\n",
+       "  'id': '97cb2b39-47b9-4c5f-aaf9-da8bd8ff3beb',\n",
+       "  'modified_at': '2022-11-19T17:58:16.635Z',\n",
+       "  'name': 'DigitRecognition Model',\n",
+       "  'owner': 'IBMid-666002J5U4',\n",
+       "  'resource_key': 'dd5de67d-e73b-45ab-b616-509638cd5fed',\n",
+       "  'space_id': '0d542d58-0e93-4b26-a2c6-156ce46c2f36'},\n",
+       " 'system': {'warnings': []}}"
+      ]
+     },
+     "execution_count": 37,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "model_details"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "id": "e449d995",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'97cb2b39-47b9-4c5f-aaf9-da8bd8ff3beb'"
+      ]
+     },
+     "execution_count": 38,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "model_id = client.repository.get_model_id(model_details)\n",
+    "model_id"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "id": "eb65ee81",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Successfully saved model content to file: 'Digit_Recognition_Model.tar.gb'\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "'/Users/jeyasri/Digit_Recognition_Model.tar.gb'"
+      ]
+     },
+     "execution_count": 39,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "client.repository.download(model_id,'Digit_Recognition_Model.tar.gb')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "fdf232dd",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.13"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
